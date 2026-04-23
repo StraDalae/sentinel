@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "com.sentinel.app-mergeDebugResources-37:/layout/activity_main.xml",
+        "source": "com.sentinel.app-main-40:/layout/activity_main.xml"
+    },
+    {
+        "merged": "C:\\Users\\eddie\\.gradle\\daemon\\8.2\\com.sentinel.app-mergeDebugResources-37:\\layout\\activity_main.xml",
+        "source": "C:\\Users\\eddie\\.gradle\\daemon\\8.2\\com.sentinel.app-main-40:\\layout\\activity_main.xml"
+    }
+]

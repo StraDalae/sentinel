@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background_dark">#0D0D0F</color>
+    <color name="surface_dark">#1A1A1F</color>
+    <color name="surface_lighter">#2A2A33</color>
+    <color name="text_primary">#F0F0F5</color>
+    <color name="text_muted">#7A7A8C</color>
+    <color name="threat_green">#00E676</color>
+    <color name="threat_yellow">#FFD740</color>
+    <color name="threat_red">#FF1744</color>
+    <color name="threat_cyan">#00E5FF</color>
+</resources>

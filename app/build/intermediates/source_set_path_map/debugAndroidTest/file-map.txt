@@ -1,0 +1,4 @@
+com.sentinel.app.test.app-androidTest-0 C:\Users\eddie\Documents\GitHub2\sentinel\app\build\generated\res\resValues\androidTest\debug
+com.sentinel.app.test.app-mergeDebugAndroidTestResources-1 C:\Users\eddie\Documents\GitHub2\sentinel\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\merged.dir
+com.sentinel.app.test.app-mergeDebugAndroidTestResources-2 C:\Users\eddie\Documents\GitHub2\sentinel\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\stripped.dir
+com.sentinel.app.test.app-merged_res-3 C:\Users\eddie\Documents\GitHub2\sentinel\app\build\intermediates\merged_res\debugAndroidTest
