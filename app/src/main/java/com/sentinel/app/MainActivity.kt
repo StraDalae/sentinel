@@ -85,6 +85,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Redirect to onboarding if it hasn't been completed yet
+        val prefs = getSharedPreferences("sentinel_prefs", MODE_PRIVATE)
+        if (!prefs.getBoolean("onboarding_complete", false)) {
+            startActivity(Intent(this, OnboardingActivity::class.java))
+            finish()
+            return
+        }
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)

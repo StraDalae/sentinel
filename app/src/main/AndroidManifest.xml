@@ -30,6 +30,11 @@
             android:value="@string/google_maps_key"/>
 
         <activity
+            android:name=".OnboardingActivity"
+         android:exported="false"
+         android:windowSoftInputMode="stateHidden"/>
+        
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
