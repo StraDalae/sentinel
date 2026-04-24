@@ -40,7 +40,7 @@ class ScannerService : Service() {
     var isScanning = false
         private set
 
-    private val userLocationHistory = ArrayDeque<Pair<Double, Double>>(50)
+    private val userLocationHistory = ArrayDeque<Pair<Long, Pair<Double, Double>>>(50)
     private val alertedFingerprints = mutableSetOf<String>()
 
     val recentSightings = mutableMapOf<String, DeviceSighting>()
@@ -64,7 +64,7 @@ class ScannerService : Service() {
             val loc = result.lastLocation ?: return
             currentLocation = loc
             if (userLocationHistory.size >= 50) userLocationHistory.removeFirst()
-            userLocationHistory.addLast(Pair(loc.latitude, loc.longitude))
+            userLocationHistory.addLast(Pair(System.currentTimeMillis(), Pair(loc.latitude, loc.longitude)))
         }
     }
 

@@ -18,7 +18,7 @@ class ThreatDetector(private val db: AppDatabase) {
 
     suspend fun processSighting(
         sighting: DeviceSighting,
-        userLocationHistory: List<Pair<Double, Double>>
+        userLocationHistory: List<Pair<Long, Pair<Double, Double>>> // timestamp -> (lat, lon)
     ): DeviceSighting {
         val dao = db.sightingDao()
         val history = dao.getSightingsForDevice(
@@ -45,11 +45,7 @@ class ThreatDetector(private val db: AppDatabase) {
         val distinctLocations = countDistinctLocations(validSightings)
         val timeSpreadMs = computeTimeSpread(validSightings)
         val consistencyRatio = computeConsistency(validSightings, distinctLocations)
-
-        // Signal 1: RSSI trend (0-10 pts)
         val rssiTrendScore = computeRssiTrendScore(validSightings)
-
-        // Signal 2: Arrival coupling (0-20 pts)
         val arrivalScore = computeArrivalCouplingScore(validSightings, userLocationHistory)
 
         val locationScore = (distinctLocations.coerceAtMost(3) / 3.0 * 45).toInt()
@@ -90,99 +86,96 @@ class ThreatDetector(private val db: AppDatabase) {
     }
 
     /**
-     * Fixed version: checks user displacement in the time window around each sighting,
-     * not globally across the entire history.
+     * Filters out sightings where the user wasn't meaningfully moving.
+     * Now uses timestamps to check displacement only within the window
+     * surrounding each sighting, rather than globally.
      */
     private fun filterStationary(
         sightings: List<DeviceSighting>,
-        userHistory: List<Pair<Double, Double>>
+        userHistory: List<Pair<Long, Pair<Double, Double>>>
     ): List<DeviceSighting> {
         if (userHistory.size < 2) return sightings
 
-        // Compute total user displacement as a rough proxy for whether they were moving.
-        // A more precise version would index user positions by timestamp — for now this
-        // correctly gates on whether the user was mobile at all during the session.
-        val totalUserDisplacement = userHistory.zipWithNext().sumOf { (a, b) ->
-            haversineDistance(a.first, a.second, b.first, b.second)
-        }
+        return sightings.filter { sighting ->
+            // Find user positions within a 5-minute window around this sighting
+            val windowStart = sighting.timestamp - 5 * 60 * 1000L
+            val windowEnd = sighting.timestamp + 5 * 60 * 1000L
+            val windowPositions = userHistory
+                .filter { (ts, _) -> ts in windowStart..windowEnd }
+                .map { (_, pos) -> pos }
 
-        return if (totalUserDisplacement >= MIN_USER_DISPLACEMENT_M) sightings else emptyList()
+            if (windowPositions.size < 2) {
+                // No window data — fall back to checking global displacement
+                val totalDisplacement = userHistory.zipWithNext().sumOf { (a, b) ->
+                    haversineDistance(a.second.first, a.second.second, b.second.first, b.second.second)
+                }
+                totalDisplacement >= MIN_USER_DISPLACEMENT_M
+            } else {
+                val windowDisplacement = windowPositions.zipWithNext().sumOf { (a, b) ->
+                    haversineDistance(a.first, a.second, b.first, b.second)
+                }
+                windowDisplacement >= MIN_USER_DISPLACEMENT_M
+            }
+        }
     }
 
     /**
-     * Computes a 0-10 score based on whether RSSI is trending upward (device approaching).
-     * Uses linear regression slope on (timestamp, rssi) pairs.
+     * 0-10 pts. Positive RSSI slope = device is physically approaching.
      */
     private fun computeRssiTrendScore(sightings: List<DeviceSighting>): Int {
         if (sightings.size < 3) return 0
 
         val sorted = sightings.sortedBy { it.timestamp }
-        val n = sorted.size.toDouble()
-
-        // Normalize timestamps to seconds from first sighting to avoid floating point issues
         val t0 = sorted.first().timestamp
         val xs = sorted.map { (it.timestamp - t0) / 1000.0 }
         val ys = sorted.map { it.rssi.toDouble() }
 
         val meanX = xs.average()
         val meanY = ys.average()
-
         val numerator = xs.zip(ys).sumOf { (x, y) -> (x - meanX) * (y - meanY) }
         val denominator = xs.sumOf { x -> (x - meanX).pow(2) }
-
         if (denominator == 0.0) return 0
 
-        val slope = numerator / denominator // dBm per second
-
-        // RSSI is negative (e.g. -70 dBm). A positive slope means it's rising toward 0 = getting stronger.
-        // A slope of +0.05 dBm/sec or more is a meaningful approach signal.
+        val slope = numerator / denominator
         return when {
             slope >= 0.10 -> 10
             slope >= 0.05 -> 7
             slope >= 0.02 -> 4
             slope >= 0.0  -> 1
-            else -> 0
+            else          -> 0
         }
     }
 
     /**
-     * Computes a 0-20 score based on whether the device arrived after the user at each location.
-     * A follower arrives after you — a coincidental device is already there.
+     * 0-20 pts. Checks whether the device arrived after the user at each location cluster.
+     * Uses real timestamps now that userLocationHistory carries them.
      */
     private fun computeArrivalCouplingScore(
         sightings: List<DeviceSighting>,
-        userHistory: List<Pair<Double, Double>>
+        userHistory: List<Pair<Long, Pair<Double, Double>>>
     ): Int {
         if (sightings.size < 2 || userHistory.size < 2) return 0
 
-        // Build location clusters for the device
         val clusters = buildClusters(sightings)
         if (clusters.size < 2) return 0
 
-        // For each cluster, find the earliest device sighting there
-        // and compare to the earliest user position near that cluster.
-        // If device arrived after user at most stops → follower pattern.
         var followerCount = 0
         var comparableCount = 0
 
         for ((center, clusterSightings) in clusters) {
             val deviceArrival = clusterSightings.minOf { it.timestamp }
 
-            // Find the earliest user position within LOCATION_CLUSTER_RADIUS_M of this cluster center
-            val userArrivalIndex = userHistory.indexOfFirst { (lat, lon) ->
-                haversineDistance(lat, lon, center.first, center.second) < LOCATION_CLUSTER_RADIUS_M
-            }
+            // Find the earliest time the user was near this cluster
+            val userArrival = userHistory
+                .filter { (_, pos) ->
+                    haversineDistance(pos.first, pos.second, center.first, center.second) < LOCATION_CLUSTER_RADIUS_M
+                }
+                .minOfOrNull { (ts, _) -> ts }
 
-            if (userArrivalIndex >= 0) {
+            if (userArrival != null) {
                 comparableCount++
-                // We don't have timestamps on userHistory entries, so we use index as a proxy
-                // for time (earlier index = earlier in session). Device arrived "after" if
-                // deviceArrival is later than the session midpoint weighted by user index.
-                // Better: if user was there first (low index) and device arrived, it followed.
-                // Heuristic: if user index is in first 60% of their history, device arrival
-                // after session start suggests it followed rather than preceded.
-                val userPositionRatio = userArrivalIndex.toDouble() / userHistory.size
-                if (userPositionRatio < 0.6) {
+                // Device arrived after user = follower pattern
+                if (deviceArrival > userArrival) {
                     followerCount++
                 }
             }
@@ -193,10 +186,6 @@ class ThreatDetector(private val db: AppDatabase) {
         return (ratio * 20).toInt()
     }
 
-    /**
-     * Groups sightings into geographic clusters, returning each cluster's
-     * center coordinate and the sightings that belong to it.
-     */
     private fun buildClusters(sightings: List<DeviceSighting>): List<Pair<Pair<Double, Double>, List<DeviceSighting>>> {
         val clusters = mutableListOf<Pair<Pair<Double, Double>, MutableList<DeviceSighting>>>()
         for (s in sightings) {
