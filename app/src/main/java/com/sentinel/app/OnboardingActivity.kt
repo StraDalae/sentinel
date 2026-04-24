@@ -115,7 +115,7 @@ class OnboardingActivity : AppCompatActivity() {
             textSize = 15f
             setTextColor(0xFF94A3B8.toInt())
             gravity = android.view.Gravity.CENTER
-            lineSpacingMultiplier = 1.5f
+            setLineSpacing(0f, 1.5f)
             setPadding(0, 28, 0, 0)
         }
 
@@ -147,7 +147,7 @@ class OnboardingActivity : AppCompatActivity() {
             text = bullets.joinToString("\n\n") { (icon, text) -> "$icon  $text" }
             textSize = 15f
             setTextColor(0xFF94A3B8.toInt())
-            lineSpacingMultiplier = 1.4f
+            setLineSpacing(0f, 1.4f)
             setPadding(0, 32, 0, 0)
         }
 
@@ -156,7 +156,7 @@ class OnboardingActivity : AppCompatActivity() {
             textSize = 13f
             setTextColor(0xFF64748B.toInt())
             gravity = android.view.Gravity.CENTER
-            lineSpacingMultiplier = 1.4f
+            setLineSpacing(0f, 1.4f)
             setPadding(0, 28, 0, 0)
         }
 
@@ -181,7 +181,7 @@ class OnboardingActivity : AppCompatActivity() {
             textSize = 14f
             setTextColor(0xFF94A3B8.toInt())
             gravity = android.view.Gravity.CENTER
-            lineSpacingMultiplier = 1.4f
+            setLineSpacing(0f, 1.4f)
             setPadding(0, 16, 0, 28)
         }
 
@@ -215,7 +215,7 @@ class OnboardingActivity : AppCompatActivity() {
                 text = reason
                 textSize = 13f
                 setTextColor(0xFF64748B.toInt())
-                lineSpacingMultiplier = 1.4f
+                setLineSpacing(0f, 1.4f)
             }
             textBlock.addView(nameView)
             textBlock.addView(reasonView)
@@ -264,7 +264,7 @@ class OnboardingActivity : AppCompatActivity() {
             textSize = 13f
             setTextColor(0xFFFBBF24.toInt())
             gravity = android.view.Gravity.CENTER
-            lineSpacingMultiplier = 1.4f
+            setLineSpacing(0f, 1.4f)
             setPadding(0, 16, 0, 0)
         }
         pageContainer.addView(note)

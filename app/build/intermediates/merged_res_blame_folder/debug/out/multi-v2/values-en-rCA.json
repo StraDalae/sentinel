@@ -4,7 +4,7 @@
             "outputFile": "com.sentinel.app-mergeDebugResources-36:/values-en-rCA/values-en-rCA.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\eddie\\.gradle\\caches\\transforms-3\\c634865c58dba19226839d38c9b3ea5a\\transformed\\core-1.12.0\\res\\values-en-rCA\\values-en-rCA.xml",
+                    "source": "C:\\Users\\eddie\\.gradle\\caches\\transforms-3\\403587a9212e5dd0e7d96926197172ff\\transformed\\core-1.12.0\\res\\values-en-rCA\\values-en-rCA.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9",
                         "startColumns": "4,4,4,4,4,4,4,4",
@@ -21,7 +21,7 @@
                     }
                 },
                 {
-                    "source": "C:\\Users\\eddie\\.gradle\\caches\\transforms-3\\1f7bcc9ed53b01088e45a745e16fbac0\\transformed\\appcompat-1.6.1\\res\\values-en-rCA\\values-en-rCA.xml",
+                    "source": "C:\\Users\\eddie\\.gradle\\caches\\transforms-3\\3f64e221becacbf4fcd2f5eb5f6f0053\\transformed\\appcompat-1.6.1\\res\\values-en-rCA\\values-en-rCA.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
