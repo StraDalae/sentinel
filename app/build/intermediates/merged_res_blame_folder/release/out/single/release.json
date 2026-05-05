@@ -1,0 +1,42 @@
+[
+    {
+        "merged": "com.sentinel.app-merged_res-38:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.sentinel.app-main-39:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "com.sentinel.app-merged_res-38:/drawable_glow_none.xml.flat",
+        "source": "com.sentinel.app-main-39:/drawable/glow_none.xml"
+    },
+    {
+        "merged": "com.sentinel.app-merged_res-38:/raw_map_style_dark.json.flat",
+        "source": "com.sentinel.app-main-39:/raw/map_style_dark.json"
+    },
+    {
+        "merged": "com.sentinel.app-merged_res-38:/drawable_ic_warning.xml.flat",
+        "source": "com.sentinel.app-main-39:/drawable/ic_warning.xml"
+    },
+    {
+        "merged": "com.sentinel.app-merged_res-38:/drawable_glow_yellow.xml.flat",
+        "source": "com.sentinel.app-main-39:/drawable/glow_yellow.xml"
+    },
+    {
+        "merged": "com.sentinel.app-merged_res-38:/drawable_ic_radar.xml.flat",
+        "source": "com.sentinel.app-main-39:/drawable/ic_radar.xml"
+    },
+    {
+        "merged": "com.sentinel.app-merged_res-38:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "com.sentinel.app-main-39:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    },
+    {
+        "merged": "com.sentinel.app-merged_res-38:/drawable_ic_menu.xml.flat",
+        "source": "com.sentinel.app-main-39:/drawable/ic_menu.xml"
+    },
+    {
+        "merged": "com.sentinel.app-merged_res-38:/drawable_glow_red.xml.flat",
+        "source": "com.sentinel.app-main-39:/drawable/glow_red.xml"
+    },
+    {
+        "merged": "com.sentinel.app-merged_res-38:/layout_activity_main.xml.flat",
+        "source": "com.sentinel.app-main-39:/layout/activity_main.xml"
+    }
+]

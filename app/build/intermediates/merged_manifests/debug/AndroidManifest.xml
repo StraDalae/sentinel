@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.sentinel.app"
-    android:versionCode="1"
-    android:versionName="1.0" >
+    package="com.aetherion.sentinel"
+    android:versionCode="2"
+    android:versionName="2.0" >
 
     <uses-sdk
         android:minSdkVersion="26"
-        android:targetSdkVersion="34" />
+        android:targetSdkVersion="35" />
 
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -23,6 +23,7 @@
         android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
@@ -44,10 +45,10 @@
     </queries>
 
     <permission
-        android:name="com.sentinel.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        android:name="com.aetherion.sentinel.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
         android:protectionLevel="signature" />
 
-    <uses-permission android:name="com.sentinel.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+    <uses-permission android:name="com.aetherion.sentinel.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
 
     <application
         android:allowBackup="true"
@@ -81,7 +82,7 @@
         <service
             android:name="com.sentinel.app.service.ScannerService"
             android:exported="false"
-            android:foregroundServiceType="location" />
+            android:foregroundServiceType="location|connectedDevice" />
         <service
             android:name="androidx.room.MultiInstanceInvalidationService"
             android:directBootAware="true"
@@ -101,7 +102,7 @@
 
         <provider
             android:name="androidx.startup.InitializationProvider"
-            android:authorities="com.sentinel.app.androidx-startup"
+            android:authorities="com.aetherion.sentinel.androidx-startup"
             android:exported="false" >
             <meta-data
                 android:name="androidx.emoji2.text.EmojiCompatInitializer"

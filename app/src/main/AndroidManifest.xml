@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
 
@@ -31,8 +32,8 @@
 
         <activity
             android:name=".OnboardingActivity"
-         android:exported="false"
-         android:windowSoftInputMode="stateHidden"/>
+            android:exported="false"
+            android:windowSoftInputMode="stateHidden"/>
         
         <activity
             android:name=".MainActivity"
@@ -45,7 +46,7 @@
 
         <service
             android:name=".service.ScannerService"
-            android:foregroundServiceType="location"
+            android:foregroundServiceType="location|connectedDevice"
             android:exported="false"/>
 
     </application>

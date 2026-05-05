@@ -12,8 +12,10 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.location.Location
 import android.os.Binder
+import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.google.android.gms.location.*
@@ -23,6 +25,7 @@ import com.sentinel.app.db.AppDatabase
 import com.sentinel.app.model.DeviceSighting
 import com.sentinel.app.threat.ThreatDetector
 import kotlinx.coroutines.*
+import java.util.ArrayDeque
 
 class ScannerService : Service() {
 
@@ -64,7 +67,7 @@ class ScannerService : Service() {
             val loc = result.lastLocation ?: return
             currentLocation = loc
             if (userLocationHistory.size >= 50) userLocationHistory.removeFirst()
-            userLocationHistory.addLast(Pair(System.currentTimeMillis(), Pair(loc.latitude, loc.longitude)))
+            userLocationHistory.add(Pair(System.currentTimeMillis(), Pair(loc.latitude, loc.longitude)))
         }
     }
 
@@ -82,177 +85,145 @@ class ScannerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        val db = AppDatabase.getInstance(this)
+        threatDetector = ThreatDetector(db)
+        
+        val bluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
+        bluetoothLeScanner = bluetoothManager.adapter.bluetoothLeScanner
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
         createNotificationChannel()
-        threatDetector = ThreatDetector(AppDatabase.getInstance(this))
-        setupLocationUpdates()
-        startForeground(NOTIF_ID_SERVICE, buildServiceNotification())
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START -> { if (!isScanning) startBLEScan() }
-            ACTION_STOP  -> { stopBLEScan(); stopSelf() }
-            else         -> { if (!isScanning) startBLEScan() }
+            ACTION_START -> startScanning()
+            ACTION_STOP -> stopScanning()
         }
         return START_STICKY
     }
 
-    override fun onBind(intent: Intent?): IBinder = binder
-    override fun onRebind(intent: Intent?) = super.onRebind(intent)
-    override fun onUnbind(intent: Intent?): Boolean = true
+    private fun startScanning() {
+        if (isScanning) return
+        isScanning = true
 
-    /**
-     * Called by MainActivity when the user hits Clear.
-     * Wipes the in-memory cache so every device currently in range
-     * gets treated as brand new on the next scan result — causing
-     * their markers to reappear on the map immediately.
-     * Does NOT stop the BLE scan.
-     */
-    fun clearSession() {
-        recentSightings.clear()
-        alertedFingerprints.clear()
-        // Fire count update so the UI resets to 0 immediately
-        scope.launch(Dispatchers.Main) {
-            onNearbyCountChanged?.invoke(0)
+        val notification = createServiceNotification("Sentinel is active", "Scanning for suspicious devices...")
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            var type = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+            }
+            startForeground(NOTIF_ID_SERVICE, notification, type)
+        } else {
+            startForeground(NOTIF_ID_SERVICE, notification)
         }
-    }
 
-    private fun setupLocationUpdates() {
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000L)
-            .setMinUpdateIntervalMillis(3000L).build()
-        try {
-            fusedLocationClient?.requestLocationUpdates(request, locationCallback, mainLooper)
-        } catch (e: SecurityException) {}
-    }
-
-    private fun startBLEScan() {
-        val adapter: BluetoothAdapter? =
-            (getSystemService(BluetoothManager::class.java))?.adapter
-        if (adapter == null || !adapter.isEnabled) return
-        bluetoothLeScanner = adapter.bluetoothLeScanner
-        val settings = ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
+        // Request location updates
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 10000)
+            .setMinUpdateIntervalMillis(5000)
             .build()
+
         try {
+            fusedLocationClient?.requestLocationUpdates(locationRequest, locationCallback, null)
+            
+            val settings = ScanSettings.Builder()
+                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                .build()
             bluetoothLeScanner?.startScan(null, settings, leScanCallback)
-            isScanning = true
         } catch (e: SecurityException) {
             isScanning = false
         }
     }
 
-    private fun stopBLEScan() {
-        try { bluetoothLeScanner?.stopScan(leScanCallback) } catch (e: SecurityException) {}
+    private fun stopScanning() {
         isScanning = false
+        try {
+            bluetoothLeScanner?.stopScan(leScanCallback)
+        } catch (e: SecurityException) {}
+        fusedLocationClient?.removeLocationUpdates(locationCallback)
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
+    fun clearSession() {
         recentSightings.clear()
         alertedFingerprints.clear()
+        onNearbyCountChanged?.invoke(0)
     }
 
     private fun handleScanResult(result: ScanResult) {
-        val location = currentLocation ?: return
-        val fingerprint = buildFingerprint(result)
-
-        // isNewDevice must be checked BEFORE updating recentSightings,
-        // so a post-clear device is correctly treated as new.
-        val isNewDevice = !recentSightings.containsKey(fingerprint)
+        val device = result.device
+        val rssi = result.rssi
+        val timestamp = System.currentTimeMillis()
+        val loc = currentLocation ?: return
 
         val sighting = DeviceSighting(
-            deviceFingerprint = fingerprint,
-            rawMac = result.device.address,
-            rssi = result.rssi,
-            latitude = location.latitude,
-            longitude = location.longitude,
-            timestamp = System.currentTimeMillis(),
-            seenAtLocations = 0,
-            threatScore = 0
+            deviceFingerprint = device.address,
+            rawMac = device.address,
+            rssi = rssi,
+            timestamp = timestamp,
+            latitude = loc.latitude,
+            longitude = loc.longitude,
+            seenAtLocations = 1
         )
+
+        recentSightings[device.address] = sighting
+        onNewSighting?.invoke(sighting)
+        onNearbyCountChanged?.invoke(recentSightings.size)
 
         scope.launch {
-            val updated = threatDetector.processSighting(
-                sighting = sighting,
-                userLocationHistory = userLocationHistory.toList()
-            )
-
-            recentSightings[fingerprint] = updated
-
-            // Fire count update for every new unique device —
-            // after a clearSession() all nearby devices are "new" again
-            if (isNewDevice) {
-                withContext(Dispatchers.Main) {
-                    onNearbyCountChanged?.invoke(recentSightings.size)
-                }
+            val updatedSighting = threatDetector.processSighting(sighting, userLocationHistory.toList())
+            if (updatedSighting.threatScore >= ThreatDetector.SCORE_ALERT_THRESHOLD && !alertedFingerprints.contains(device.address)) {
+                alertedFingerprints.add(device.address)
+                showThreatNotification(updatedSighting)
             }
-
-            if (updated.threatScore >= ThreatDetector.SCORE_ALERT_THRESHOLD &&
-                !alertedFingerprints.contains(fingerprint)) {
-                alertedFingerprints.add(fingerprint)
-                fireThreatNotification(updated)
-            }
-
-            // Always fire onNewSighting — MainActivity uses this to place/update markers.
-            // After a clear, isNewDevice=true means a fresh marker gets created.
-            withContext(Dispatchers.Main) { onNewSighting?.invoke(updated) }
         }
-    }
-
-    private fun buildFingerprint(result: ScanResult): String {
-        val sb = StringBuilder()
-        result.scanRecord?.let { record ->
-            sb.append(record.advertiseFlags)
-            sb.append(record.txPowerLevel)
-            record.serviceUuids?.forEach { sb.append(it.toString()) }
-            record.bytes?.let { sb.append(it.take(10).hashCode()) }
-        }
-        sb.append(result.primaryPhy)
-        sb.append(result.secondaryPhy)
-        return if (sb.isEmpty()) result.device.address
-        else sb.toString().hashCode().toString(16)
-    }
-
-    private fun fireThreatNotification(sighting: DeviceSighting) {
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
-        )
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_warning)
-            .setContentTitle("⚠ Possible Stalking Device Detected")
-            .setContentText(
-                "Threat score ${sighting.threatScore}/100 · " +
-                "Seen at ${sighting.seenAtLocations} locations."
-            )
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
-            .setVibrate(longArrayOf(0, 500, 200, 500))
-            .build()
-        getSystemService(NotificationManager::class.java).notify(NOTIF_ID_THREAT, notification)
-    }
-
-    private fun buildServiceNotification(): Notification {
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
-        )
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_radar)
-            .setContentTitle("Sentinel is active")
-            .setContentText("Monitoring nearby devices...")
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setContentIntent(pendingIntent)
-            .build()
     }
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID, "Sentinel Scanner", NotificationManager.IMPORTANCE_HIGH
-        ).apply { description = "Sentinel background scanning and threat alerts" }
-        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Sentinel Scanner",
+                NotificationManager.IMPORTANCE_LOW
+            )
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
     }
+
+    private fun createServiceNotification(title: String, content: String): Notification {
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle(title)
+            .setContentText(content)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentIntent(pendingIntent)
+            .setOngoing(true)
+            .build()
+    }
+
+    private fun showThreatNotification(sighting: DeviceSighting) {
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Suspicious Device Detected")
+            .setContentText("A device has been following you across multiple locations.")
+            .setSmallIcon(android.R.drawable.stat_sys_warning)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+        
+        notificationManager.notify(NOTIF_ID_THREAT, notification)
+    }
+
+    override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onDestroy() {
         super.onDestroy()
-        stopBLEScan()
-        fusedLocationClient?.removeLocationUpdates(locationCallback)
         scope.cancel()
     }
 }

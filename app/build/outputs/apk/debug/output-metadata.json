@@ -4,7 +4,7 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "com.sentinel.app",
+  "applicationId": "com.aetherion.sentinel",
   "variantName": "debug",
   "elements": [
     {

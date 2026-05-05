@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.sentinel.app-mergeReleaseResources-36:/values-ldltr-v21/values-ldltr-v21.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\eddie\\.gradle\\caches\\transforms-3\\3f64e221becacbf4fcd2f5eb5f6f0053\\transformed\\appcompat-1.6.1\\res\\values-ldltr-v21\\values-ldltr-v21.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "112",
+                        "endOffsets": "163"
+                    }
+                }
+            ]
+        }
+    ]
+}

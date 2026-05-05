@@ -1,0 +1,6 @@
+[
+    {
+        "merged": "com.sentinel.app-mergeReleaseResources-37:/layout/activity_main.xml",
+        "source": "com.sentinel.app-main-39:/layout/activity_main.xml"
+    }
+]
