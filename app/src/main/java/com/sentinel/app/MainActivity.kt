@@ -298,6 +298,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 updateFlaggedCount()
             }
         }
+        scannerService?.onDeviceVanished = { fingerprint ->
+            runOnUiThread {
+                markers.remove(fingerprint)?.remove()
+                threatPaths.remove(fingerprint)?.remove()
+                updateFlaggedCount()
+            }
+        }
     }
 
     // ── Map markers ───────────────────────────────────────────────────────────
